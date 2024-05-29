@@ -56,26 +56,3 @@ if host.data.get("type") in {"debian", "ubuntu"}:
             groups=["docker"],
             user=host.data.get("username"),
         )
-
-if host.data.get("type") in {"debian", "proxmox", "ubuntu"}:
-    dpkg_arch = host.get_fact(Command, command="dpkg --print-architecture")
-
-    apt.deb(
-        name="Install cloudflared",
-        src=f"https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-{dpkg_arch}.deb",
-    )
-
-    if not host.get_fact(File, "/etc/systemd/system/cloudflared.service"):
-        server.shell(name="Configure cloudflared", commands=[f"cloudflared service install {host.data.get("cloudflare_tunnel_token")}"])
-
-if "coolify" in host.data.get("tags") and "docker" in host.data.get("tags"):
-    if not host.get_fact(DockerNetwork, "coolify"):
-        server.shell(name="Add docker network", commands=["docker network create coolify"])
-
-    if not host.get_fact(DockerContainer, "coolify-tailscale"):
-        server.shell(
-            name="Deploy coolify-tailscale container",
-            commands=[
-                f"docker run -d -e TS_ACCEPT_DNS=true -e TS_AUTHKEY={host.data.get("tailscale_key")} -e TS_EXTRA_ARGS=--accept-routes -e TS_HOSTNAME={host.data.get("host")}-docker -e TS_USERSPACE=false -v /dev/net/tun:/dev/net/tun --cap-add NET_ADMIN --cap-add NET_RAW --name coolify-tailscale --network coolify tailscale/tailscale"
-            ]
-        )
