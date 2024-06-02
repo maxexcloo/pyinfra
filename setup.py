@@ -56,3 +56,14 @@ if host.data.get("type") in {"debian", "ubuntu"}:
             groups=["docker"],
             user=host.data.get("username"),
         )
+
+if host.data.get("type") in {"debian", "proxmox", "ubuntu"}:
+    dpkg_arch = host.get_fact(Command, command="dpkg --print-architecture")
+
+    apt.deb(
+        name="Install cloudflared",
+        src=f"https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-{dpkg_arch}.deb",
+    )
+
+    if not host.get_fact(File, "/etc/systemd/system/cloudflared.service"):
+        server.shell(name="Configure cloudflared", commands=[f"cloudflared service install {host.data.get("cloudflare_tunnel_token")}"])
